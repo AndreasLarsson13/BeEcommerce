@@ -7,7 +7,12 @@ const router = express
 
 const app = express();
 
-app.use(cors());
+const corsOptions = {
+  origin: 'https://fe-ecommerce-ashy.vercel.app',
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
