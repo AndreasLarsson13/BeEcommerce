@@ -8,8 +8,7 @@ const router = express
 const app = express();
 
 const corsOptions = {
-  origin: 'https://fe-ecommerce-ashy.vercel.app',
-  optionsSuccessStatus: 200
+  origin: 'https://fe-ecommerce-git-master-andreaslarsson13s-projects.vercel.app/'
 };
 
 app.use(cors(corsOptions));
