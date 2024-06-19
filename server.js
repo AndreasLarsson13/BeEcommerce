@@ -8,7 +8,7 @@ const router = express
 const app = express();
 
 const corsOptions = {
-  origin: 'https://fe-ecommerce-git-master-andreaslarsson13s-projects.vercel.app/'
+  origin: "*"
 };
 
 app.use(cors(corsOptions));
