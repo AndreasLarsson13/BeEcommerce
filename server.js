@@ -1,136 +1,98 @@
 const express = require('express');
-const {MongoClient, ObjectId} = require('mongodb');
-
+const { MongoClient, ObjectId } = require('mongodb');
 const cors = require('cors'); // Import the cors package
 
+const app = express();
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  preflightContinue: false,
-  optionsSuccessStatus: 204
+const allowCors = (fn) => async (req, res) => {
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  // Alternatively, you can use the origin from the request
+  // res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  );
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  return await fn(req, res);
 };
 
+app.use(cors()); // Use CORS for all routes
 
-app.use(cors(corsOptions));
+// Your MongoDB URI and database name
+const uri = 'mongodb+srv://larssonandreas11:Hammarby1@cluster0.yha3nfs.mongodb.net/?retryWrites=true&w=majority';
+const dbName = 'Natbutiken';
 
-// Enable pre-flight for all routes
-app.options('*', cors(corsOptions));
+// Helper function for currency conversion
+const dailyPriceSek = 10;
 
-app.use(cors(corsOptions));
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-
-
-
-// MongoDB connection URI
-const uri = 'mongodb+srv://larssonandreas11:Hammarby1@cluster0.yha3nfs.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
-
-// Database Name
-const dbName = 'Natbutiken'; // Update with your database name
-
-//currency 
-const dailyPriceSek = 10
-
-function hanterPricSprak (data, req) {
+function handlePriceLanguage(data, req) {
   const currency = req.query.currency;
   data.forEach((item) => {
-    if(currency ==="se")
-      {
-        item.currency = "SEK"
-        item.price *= dailyPriceSek
-        item.sale_price *= dailyPriceSek
-        item.variations.forEach(attributes => {
-        if(attributes.price) {
-          attributes.price *= dailyPriceSek
+    if (currency === "se") {
+      item.currency = "SEK";
+      item.price *= dailyPriceSek;
+      item.sale_price *= dailyPriceSek;
+      item.variations.forEach(attributes => {
+        if (attributes.price) {
+          attributes.price *= dailyPriceSek;
         }
-      })
-      
-    }else {
-        item.currency = "EUR"
-    }})
+      });
+    } else {
+      item.currency = "EUR";
+    }
+  });
 
-    return data 
+  return data;
 }
 
+// Middleware function to handle CORS and requests
+const allowCorsMiddleware = fn => allowCors(async (req, res) => {
+  try {
+    await fn(req, res);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
 
-
-app.get('/produkt/:param', async (req, res) => {
+// Route to fetch a specific product
+app.get('/produkt/:param', allowCorsMiddleware(async (req, res) => {
   const produktNamn = req.params.param;
-  
 
-  try {
-    const client = await MongoClient.connect(uri);
-    const db = client.db(dbName);
-    // Connect to the MongoDB server
+  const client = await MongoClient.connect(uri);
+  const db = client.db(dbName);
+  const collectionName = 'Produkter';
+  const collection = db.collection(collectionName);
 
-    const collectionName = 'Produkter'; // Update with your collection name
-    // Fetch data from the collection
-    const collection = db.collection(collectionName);
+  const data = await collection.findOne({ _id: new ObjectId(produktNamn) });
 
-    const data = await collection.findOne({ _id: new ObjectId(produktNamn) });
+  client.close();
 
-    // Close the connection
-    client.close();
+  const filteredData = handlePriceLanguage([data], req);
 
-    //currency
-  const filterData = data
-    if(req.query.currency === "se")
-    {
-      filterData.price *= dailyPriceSek
-      filterData.sale_price *= dailyPriceSek
-      filterData.variations.forEach(attributes => {
-      if(attributes.price) {
-        attributes.price *= dailyPriceSek
-      }
-    });
-    }
+  res.json(filteredData[0]);
+}));
 
-    // Send the data as a response
-    res.json(filterData);
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).send('Internal Server Error');
-  }
-});
+// Route to fetch all products
+app.get('/products', allowCorsMiddleware(async (req, res) => {
+  const client = await MongoClient.connect(uri);
+  const db = client.db(dbName);
+  const collectionName = 'Produkter';
+  const collection = db.collection(collectionName);
 
+  const data = await collection.find({}).toArray();
 
+  client.close();
 
-app.get('/products', async (req, res) => {
+  const filteredData = handlePriceLanguage(data, req);
 
-  try {
-  
- const client = await MongoClient.connect(uri);
-    const db = client.db(dbName);
-
-    const collectionName = 'Produkter'; // Update with your collection name
-    // Hämta data från samlingen baserat på söksträngen (om det behövs)
-    const collection = db.collection(collectionName);
-    
-    const data = await collection.find({}).toArray();
-
-    
-    // Stäng anslutningen
-    client.close();
-
-
-
-    const dataSend = hanterPricSprak(data, req)
-
-    // Send the data as a response
-    res.json(dataSend);
-
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).send('Internal Server Error');
-  }
-});
+  res.json(filteredData);
+}));
 
 /* Search */
 
