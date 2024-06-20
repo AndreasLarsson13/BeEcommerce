@@ -7,12 +7,10 @@ const router = express
 
 const app = express();
 
-const corsOptions = {
-  origin: '*',
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  preflightContinue: false,
-  optionsSuccessStatus: 204
-};
+const allowedOrigins = [
+  'http://localhost:3000', 
+  'https://fe-ecommerce-git-master-andreaslarsson13s-projects.vercel.app'
+];
 
 app.use(cors(corsOptions));
 app.use(express.urlencoded({ extended: true }));
