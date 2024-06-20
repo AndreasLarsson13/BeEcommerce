@@ -3,14 +3,33 @@ const {MongoClient, ObjectId} = require('mongodb');
 
 const cors = require('cors'); // Import the cors package
 
-const router = express
-
-const app = express();
-
 const allowedOrigins = [
   'http://localhost:3000', 
   'https://fe-ecommerce-git-master-andreaslarsson13s-projects.vercel.app'
 ];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // Allow requests with no origin
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('Not allowed by CORS'), false);
+    }
+  },
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
+
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  next();
+});
 
 app.use(cors(corsOptions));
 app.use(express.urlencoded({ extended: true }));
