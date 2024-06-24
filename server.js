@@ -4,6 +4,8 @@ const cors = require('cors'); // Import the cors package
 
 const app = express();
 
+app.use(express.json()); // Middleware to parse JSON bodies
+
 app.use(cors({
   origin: 'http://127.0.0.1:5501', // Adjust this to match your development origin
   credentials: true,
@@ -39,14 +41,14 @@ function handlePriceLanguage(data, req) {
 }
 
 // Middleware function to handle CORS and requests
-const allowCorsMiddleware = fn => allowCors(async (req, res) => {
+const allowCorsMiddleware = fn => async (req, res) => {
   try {
     await fn(req, res);
   } catch (error) {
     console.error('Error:', error);
     res.status(500).send('Internal Server Error');
   }
-});
+};
 
 // Route to fetch a specific product
 app.get('/produkt/:param', allowCorsMiddleware(async (req, res) => {
@@ -82,293 +84,183 @@ app.get('/products', allowCorsMiddleware(async (req, res) => {
   res.json(filteredData);
 }));
 
-/* Search */
+// Route for search functionality
+app.get('/search', allowCorsMiddleware(async (req, res) => {
+  const searchText = req.query.text; // Extract the string value from the query object
 
-app.get('/search', async (req, res) => {
-  const produktNamn = req.query;
-  try {
-  
- const client = await MongoClient.connect(uri);
-    const db = client.db(dbName);
+  const client = await MongoClient.connect(uri);
+  const db = client.db(dbName);
+  const collectionName = 'Produkter'; // Update with your collection name
+  const collection = db.collection(collectionName);
 
-    const collectionName = 'Produkter'; // Update with your collection name
-    // Hämta data från samlingen baserat på söksträngen (om det behövs)
-    const collection = db.collection(collectionName);
-    
-    const searchText = produktNamn.text; // Extract the string value from the object
-    const data = await collection.find({ name: { $regex: searchText, $options: 'i' } }).toArray();
-    
+  const data = await collection.find({ name: { $regex: searchText, $options: 'i' } }).toArray();
 
-    // Stäng anslutningen
-    client.close();
+  client.close();
 
+  const filteredData = handlePriceLanguage(data, req);
 
+  res.json(filteredData);
+}));
 
-    const dataSend = hanterPricSprak(data, req)
-console.log(dataSend)
-    // Send the data as a response
-    res.json(dataSend);
+// Route to fetch categories
+app.get('/kategorier', allowCorsMiddleware(async (req, res) => {
+  const client = await MongoClient.connect(uri);
+  const db = client.db(dbName);
+  const collectionName = 'Kategorier';
+  const collection = db.collection(collectionName);
 
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).send('Internal Server Error');
-  }
-});
+  const data = await collection.find({}).toArray();
 
-app.get('/katergorier', async (req, res) => {
-  try {
-    // Connect to the MongoDB server
-    const client = await MongoClient.connect(uri);
-    const db = client.db(dbName);
+  client.close();
 
+  res.json(data);
+}));
 
-    const collectionName = 'Kategorier'; // Update with your collection name
-    // Fetch data from the collection
-    const collection = db.collection(collectionName);
-    const data = await collection.find({}).toArray();
-    // Close the connection
-    client.close();
+// Route to fetch latest products
+app.get('/nyaProdukter', allowCorsMiddleware(async (req, res) => {
+  const client = await MongoClient.connect(uri);
+  const db = client.db(dbName);
+  const collectionName = 'Produkter';
+  const collection = db.collection(collectionName);
 
-    // Send the data as a response
-    res.json(data);
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).send('Internal Server Error');
-  }
-});
-
-app.get('/nyaProdukter', async (req, res) => {
-
-  try {
-    // Connect to the MongoDB server
-    const client = await MongoClient.connect(uri);
-    const db = client.db(dbName);
-
-    const collectionName = 'Produkter'; // Update with your collection name
-    // Fetch data from the collection
-    const collection = db.collection(collectionName);
-    const latestDocuments = await collection.find({})
+  const latestDocuments = await collection.find({})
     .sort({ date: -1 }) // Sort documents by dateField in descending order
     .limit(10) // Limit the result to 10 documents
     .toArray();
-    // Close the connection
-    client.close();
-    const dataSend = hanterPricSprak(latestDocuments, req)
 
-    // Send the data as a response
-    res.json(dataSend);
+  client.close();
 
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).send('Internal Server Error');
-  }
-});
+  const filteredData = handlePriceLanguage(latestDocuments, req);
 
-app.get('/saleProdukter', async (req, res) => {
+  res.json(filteredData);
+}));
 
-  try {
-    // Connect to the MongoDB server
-    const client = await MongoClient.connect(uri);
-    const db = client.db(dbName);
+// Route to fetch sale products
+app.get('/saleProdukter', allowCorsMiddleware(async (req, res) => {
+  const client = await MongoClient.connect(uri);
+  const db = client.db(dbName);
+  const collectionName = 'Produkter';
+  const collection = db.collection(collectionName);
 
+  const data = await collection.find({}).toArray();
 
-    const collectionName = 'Produkter'; // Update with your collection name
-    // Fetch data from the collection
-    const collection = db.collection(collectionName);
-    const data = await collection.find({}).toArray();
+  client.close();
 
-    // Close the connection
-    client.close();
+  const filteredData = handlePriceLanguage(data, req);
 
-    
-  const dataSend = hanterPricSprak(data, req)
+  res.json(filteredData);
+}));
 
-  // Send the data as a response
-  res.json(dataSend);
+// Route to fetch brands
+app.get('/brands', allowCorsMiddleware(async (req, res) => {
+  const client = await MongoClient.connect(uri);
+  const db = client.db(dbName);
+  const collectionName = 'Brands';
+  const collection = db.collection(collectionName);
 
-    // Send the data as a response
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).send('Internal Server Error');
-  }
-});
+  const data = await collection.find({}).toArray();
 
-app.get('/brands', async (req, res) => {
-  try {
-    // Connect to the MongoDB server
-    const client = await MongoClient.connect(uri);
-    const db = client.db(dbName);
+  client.close();
 
+  res.json(data);
+}));
 
-    const collectionName = 'Brands'; // Update with your collection name
-    // Fetch data from the collection
-    const collection = db.collection(collectionName);
-    const data = await collection.find({}).toArray();
+// Route to fetch flash sale products
+app.get('/flashSale', allowCorsMiddleware(async (req, res) => {
+  const client = await MongoClient.connect(uri);
+  const db = client.db(dbName);
+  const collectionName = 'Produkter';
+  const collection = db.collection(collectionName);
 
-    // Close the connection
-    client.close();
+  const data = await collection.find({}).toArray();
 
-    // Send the data as a response
-    res.json(data);
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).send('Internal Server Error');
-  }
-});
+  client.close();
 
-app.get('/flashSale', async (req, res) => {
-  try {
-    // Connect to the MongoDB server
-    const client = await MongoClient.connect(uri);
-    const db = client.db(dbName);
+  const filteredData = handlePriceLanguage(data, req);
 
+  res.json(filteredData);
+}));
 
-    const collectionName = 'Produkter'; // Update with your collection name
-    // Fetch data from the collection
-    const collection = db.collection(collectionName);
-    const data = await collection.find({}).toArray();
+// Route to fetch featured products
+app.get('/featured', allowCorsMiddleware(async (req, res) => {
+  const client = await MongoClient.connect(uri);
+  const db = client.db(dbName);
+  const collectionName = 'Produkter';
+  const collection = db.collection(collectionName);
 
-    // Close the connection
-    client.close();
-
-  const dataSend = hanterPricSprak(data, req)
-
-    // Send the data as a response
-    res.json(dataSend);
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).send('Internal Server Error');
-  }
-});
-
-app.get('/featured', async (req, res) => {
-  try {
-    // Connect to the MongoDB server
-    const client = await MongoClient.connect(uri);
-    const db = client.db(dbName);
-
-
-    const collectionName = 'Produkter'; // Update with your collection name
-    // Fetch data from the collection
-    const collection = db.collection(collectionName);
-   
-    const featured = await collection.find({
-      featured: { $ne: false }
-    })
+  const featured = await collection.find({
+    featured: { $ne: false }
+  })
     .sort({ date: -1 }) // Sort documents by dateField in descending order
     .limit(10) // Limit the result to 10 documents
     .toArray();
-    // Close the connection
-    client.close();
 
-    
-  const dataSend = hanterPricSprak(featured, req)
-  // Send the data as a response
-  res.json(dataSend);
-    
+  client.close();
 
-    // Send the data as a response
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).send('Internal Server Error');
-  }
-});
+  const filteredData = handlePriceLanguage(featured, req);
 
+  res.json(filteredData);
+}));
 
-app.post('/nyhetsbrev', async (req, res) => {
+// Route to handle newsletter subscriptions
+app.post('/nyhetsbrev', allowCorsMiddleware(async (req, res) => {
   const subscription_email = req.body.subscription_email;
 
-  try {
-      // Connect to the MongoDB server
-      const client = await MongoClient.connect(uri);
-      const db = client.db(dbName);
+  const client = await MongoClient.connect(uri);
+  const db = client.db(dbName);
+  const collection = db.collection('newsletter');
 
-      // Get the newsletter collection
-      const collection = db.collection('newsletter');
+  await collection.insertOne({ email: subscription_email });
 
-      // Insert the email into the newsletter collection
-      await collection.insertOne({ email: subscription_email });
+  client.close();
 
-      // Close the connection
-      client.close();
+  res.status(200).send('Email subscription successful!');
+}));
 
-      // Send a success response
-      res.status(200).send('Email subscription successful!');
-  } catch (error) {
-      console.error('Error:', error);
-      res.status(500).send('Internal Server Error');
+// Route to handle support form submissions
+app.post('/support-form', allowCorsMiddleware(async (req, res) => {
+  const supportData = {
+    type: req.body.type,
+    namn: req.body.name,
+    email: req.body.email,
+    message: req.body.message,
+  };
+
+  if (supportData.type === "reklamation") {
+    supportData.orderId = req.body.orderId;
+    supportData.produktNamn = req.body.produktNamn;
   }
-});
 
+  const client = await MongoClient.connect(uri);
+  const db = client.db(dbName);
+  const collection = db.collection('support');
 
-app.post('/support-form', async (req, res) => {
-  try {
-      // Connect to the MongoDB server
-      const client = await MongoClient.connect(uri);
-      const db = client.db(dbName);
+  await collection.insertOne(supportData);
 
-      // Get the newsletter collection
-      const collection = db.collection('support');
+  client.close();
 
+  res.status(200).send('Support form submission successful!');
+}));
 
-      // Insert the email into the newsletter collection
-      const supportData = {
-        type: req.body.type,
-        namn: req.body.name,
-        email: req.body.email,
-        message: req.body.message
-      }
+// Route to handle contact form submissions
+app.post('/contact-form', allowCorsMiddleware(async (req, res) => {
+  const contactData = {
+    namn: req.body.name,
+    email: req.body.email,
+    title: req.body.subject,
+    message: req.body.message,
+  };
 
-      if(supportData.type === "reklamation"){
-        supportData.orderId = req.body.orderId
-        supportData.produktNamn = req.body.produktNamn
-      }
+  const client = await MongoClient.connect(uri);
+  const db = client.db(dbName);
+  const collection = db.collection('contact');
 
-      await collection.insertOne(supportData);
+  await collection.insertOne(contactData);
 
-      // Close the connection
-      client.close();
+  client.close();
 
-      // Send a success response
-      res.status(200).send('Email subscription successful!');
-  } catch (error) {
-      console.error('Error:', error);
-      res.status(500).send('Internal Server Error');
-  }
-});
-
-
-app.post('/contact-form', async (req, res) => {
-  console.log(req.body)
-    try {
-        // Connect to the MongoDB server
-        const client = await MongoClient.connect(uri);
-        const db = client.db(dbName);
-  
-        // Get the newsletter collection
-        const collection = db.collection('contact');
-  
-  
-        // Insert the email into the newsletter collection
-        const supportData = {
-          namn: req.body.name,
-          email: req.body.email,
-          title: req.body.subject,
-          message: req.body.message
-        }
-  
-        await collection.insertOne(supportData);
-  
-        // Close the connection
-        client.close();
-  
-        // Send a success response
-        res.status(200).send('Email subscription successful!');
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).send('Internal Server Error');
-    }
-  });
+  res.status(200).send('Contact form submission successful!');
+}));
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
