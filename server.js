@@ -10,7 +10,6 @@ app.use(cors({
   methods: 'GET,OPTIONS,PATCH,DELETE,POST,PUT',
   allowedHeaders: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
 }));
-app.use(cors()); // Use CORS for all routes
 
 // Your MongoDB URI and database name
 const uri = 'mongodb+srv://larssonandreas11:Hammarby1@cluster0.yha3nfs.mongodb.net/?retryWrites=true&w=majority';
