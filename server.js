@@ -6,13 +6,9 @@ const app = express();
 
 app.use(express.json()); // Middleware to parse JSON bodies
 
-const corsOptions = {
-  origin: 'https://fe-ecommerce-ashy.vercel.app',
-  methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-};
 
-app.use(cors(corsOptions));
+
+app.use(cors());
 
 // Your MongoDB URI and database name
 const uri = 'mongodb+srv://larssonandreas11:Hammarby1@cluster0.yha3nfs.mongodb.net/?retryWrites=true&w=majority';
